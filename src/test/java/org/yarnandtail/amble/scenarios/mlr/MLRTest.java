@@ -41,7 +41,7 @@ class MLRTest {
 		sqsMessage.version = "1.1";
 		sqsMessage.timestamp = "888888";
 
-		status.setOutcome(CONTINUE);
+		status.setOutcome(OK);
 		status.sqsMessage = sqsMessage;
 
 		daoResult.id = 999999L;
@@ -60,42 +60,42 @@ class MLRTest {
 
 		//Initial checks based on SQS Attributes
 		builder.
-				ifTrue(s -> (s.sqsMessage == null), MESSAGE_UNREADABLE).
-				ifException(s -> s.version = Double.parseDouble(s.sqsMessage.version), UNSUPPORTED_MESSAGE_VERSION).
-				ifFalse(s -> s.version < 2.0 && s.version > 1.0, UNSUPPORTED_MESSAGE_VERSION).
-				ifException(s -> s.newTimestamp = Long.parseLong(s.sqsMessage.timestamp), UPSTREAM_TIMESTAMP_UNREADABLE);
+				ifTrue(s -> (s.sqsMessage == null), MESSAGE_INVALID).
+				ifException(s -> s.version = Double.parseDouble(s.sqsMessage.version), MESSAGE_VERSION_INVALID).
+				ifFalse(s -> s.version < 2.0 && s.version > 1.0, MESSAGE_VERSION_INVALID).
+				ifException(s -> s.newTimestamp = Long.parseLong(s.sqsMessage.timestamp), UPSTREAM_TIMESTAMP_INVALID);
 
 		//Parse to domain object
 		builder.
-				ifException(s -> s.message = s.sqsMessage.message, MESSAGE_UNREADABLE).	//parse json message
-				ifException(s -> s.message.domain.lastTimestamp = s.newTimestamp, MESSAGE_UNREADABLE).
-				ifException(s -> s.domain = s.message.domain, MESSAGE_UNREADABLE).
-				ifException(s -> s.currentTimestamp = dao.getLastTimestamp(s.domain.upstreamId), MESSAGE_UNREADABLE);
+				ifException(s -> s.message = s.sqsMessage.message, MESSAGE_INVALID).	//parse json message
+				ifException(s -> s.message.domain.lastTimestamp = s.newTimestamp, MESSAGE_INVALID).
+				ifException(s -> s.domain = s.message.domain, MESSAGE_INVALID).
+				ifException(s -> s.currentTimestamp = dao.getLastTimestamp(s.domain.upstreamId), MESSAGE_INVALID);
 
 		//should we run this update?
 		builder.
-				ifTrue(s -> (s.message.type.equals(Type.CREATE) && s.currentTimestamp != null), CREATION_WOULD_OVERWRITE_EXISTING).
-				ifTrue(s -> (s.newTimestamp < ((s.currentTimestamp != null)?s.currentTimestamp:Long.MIN_VALUE)), OLD_TIMESTAMP).
-				ifTrue(s -> (s.newTimestamp == ((s.currentTimestamp != null)?s.currentTimestamp:Long.MIN_VALUE)), SAME_TIMESTAMP);
+				ifTrue(s -> (s.message.type.equals(Type.CREATE) && s.currentTimestamp != null), CREATION_WOULD_OVERWRITE_EXISTING_ERR).
+				ifTrue(s -> (s.newTimestamp < ((s.currentTimestamp != null)?s.currentTimestamp:Long.MIN_VALUE)), OLD_TIMESTAMP_INVALID).
+				ifTrue(s -> (s.newTimestamp == ((s.currentTimestamp != null)?s.currentTimestamp:Long.MIN_VALUE)), SAME_TIMESTAMP_INVALID);
 
 		//Do the Update
 		builder.
-				ifException(s -> s.daoResult = dao.doUpsert(s.domain), NOT_CONTINUE);
+				ifException(s -> s.daoResult = dao.doUpsert(s.domain), ERROR);
 
 		//Determine Outcome
 		builder.
-				ifTrue(s -> s.daoResult.type.equals(Type.NOOP), OLD_TIMESTAMP).
+				ifTrue(s -> s.daoResult.type.equals(Type.NOOP), OLD_TIMESTAMP_INVALID).
 				ifTrue(s -> s.message.type.equals(Type.CREATE),
-						builder.ifTrue(s -> s.daoResult.type.equals(Type.CREATE), CREATION),
-						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), CREATION_WOULD_OVERWRITE_EXISTING) ).
+						builder.ifTrue(s -> s.daoResult.type.equals(Type.CREATE), CREATION_DONE),
+						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), CREATION_WOULD_OVERWRITE_EXISTING_ERR) ).
 				ifTrue(s -> s.message.type.equals(Type.MODIFY),
-						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), MODIFICATION),
-						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), MODIFICATION_WAS_CREATION) );
+						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), MODIFICATION_DONE),
+						builder.ifTrue(s -> s.daoResult.type.equals(Type.MODIFY), MODIFICATION_WAS_CREATION_DONE) );
 
 		//And run it...
 		builder.run(status);
 
-		assertEquals(CREATION, status.getOutcome());
+		assertEquals(CREATION_DONE, status.getOutcome());
 	}
 
 }

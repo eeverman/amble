@@ -12,6 +12,10 @@ public interface Outcome {
 		return name().equals("DONE") || name().endsWith("_DONE");
 	}
 
+	default boolean isValidationStop() {
+		return name().equals("INVALID") || name().endsWith("_INVALID");
+	}
+
 	default boolean isErrorStop() {
 		return name().equals("ERROR") || name().endsWith("_ERR");
 	}
