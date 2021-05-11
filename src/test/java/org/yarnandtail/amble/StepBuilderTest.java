@@ -33,7 +33,7 @@ class StepBuilderTest {
 	}
 
     @Test
-    public void exceptionTest() {
+    public void handledExceptionTest() {
 
         builder.
                 ifFalse(s -> status.isTwo(), OK).
@@ -43,5 +43,14 @@ class StepBuilderTest {
 
         assertEquals(DOMAIN_IS_NULL_ERR, status.getOutcome());
     }
+
+	@Test
+	public void runtimeExceptionTest() {
+
+		builder.
+				ifFalse(s -> status.isTwo(), OK).
+				ifException(s -> s.setDomainObj(2L / 0L), DOMAIN_IS_NULL_ERR).
+				run(status);
+	}
 }
 

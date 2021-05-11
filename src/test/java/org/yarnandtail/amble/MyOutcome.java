@@ -5,4 +5,5 @@ public enum MyOutcome implements Outcome {
 	ERROR,
 	DOMAIN_IS_NULL_ERR,
 	HAPPY_RESULT_DONE;
+
 }

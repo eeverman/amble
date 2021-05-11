@@ -1,8 +1,6 @@
 package org.yarnandtail.amble;
 
-import org.yarnandtail.amble.impl.StepToOutcome;
-import org.yarnandtail.amble.impl.PathImpl;
-import org.yarnandtail.amble.impl.StepToPath;
+import org.yarnandtail.amble.impl.*;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -91,5 +89,43 @@ public class StepBuilder<S extends ProcessStatus<O>, O extends Outcome> {
 		PathImpl<S, O> path = new PathImpl();
 		path.addSteps(steps);
 		return path;
+	}
+
+	public ExceptionPolicy<S, O> treatAsFalse(Class<? extends Throwable> throwable, O outcome) {
+		ExceptionPolicyBoundaryImpl<S, O> callback = new ExceptionPolicyBoundaryImpl(this);
+
+		ExceptionPolicy<S, O> policy = new ExceptionPolicyImpl<S, O>(
+				callback, throwable, ExceptionAction.TREAT_AS_FALSE, ExceptionAction.NO_SPEC);
+
+		return policy;
+	}
+
+	public static class ExceptionPolicyBoundaryImpl<S extends ProcessStatus<O>, O extends Outcome> implements ExceptionPolicyBoundary<S, O> {
+
+		private final StepBuilder stepBuilder;
+
+		public ExceptionPolicyBoundaryImpl(StepBuilder stepBuilder) {
+			this.stepBuilder = stepBuilder;
+		}
+
+		@Override
+		public void begin(ExceptionPolicy<S, O> policy) {
+			stepBuilder.begin(policy);
+		}
+
+		@Override
+		public void end(ExceptionPolicy<S, O> policy) {
+			stepBuilder.end(policy);
+		}
+	}
+
+
+	private void begin(ExceptionPolicy<S, O> policy) {
+		steps.add(policy);
+	}
+
+	private void end(ExceptionPolicy<S, O> policy) {
+		PolicyEndStep<S, O> pes = new PolicyEndStep(policy);
+		steps.add(pes);
 	}
 }

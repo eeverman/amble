@@ -19,4 +19,8 @@ public interface Outcome {
 	default boolean isErrorStop() {
 		return name().equals("ERROR") || name().endsWith("_ERR");
 	}
+
+	default boolean isDefaultError() {
+		return name().equals("ERROR");
+	}
 }
